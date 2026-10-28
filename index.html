@@ -1008,7 +1008,14 @@ async function liveFetch(url, opts, tries){
   }
   throw last || new Error('Request failed');
 }
-async function liveGet(key, params){ const a = await liveFetch(liveUrl(key, params), {method:'POST'}, 3); return Array.isArray(a) ? a : []; }
+// Excel reads: the server-side email filter returns no rows, so fetch the table and filter here (case-insensitive).
+async function liveGet(key, params){
+  const clientFilter = params && params.email && (key === 'getProgress' || key === 'getAttemptSets');
+  const a = await liveFetch(liveUrl(key, clientFilter ? null : params), {method:'POST'}, 3);
+  let rows = Array.isArray(a) ? a : [];
+  if(clientFilter){ const em = String(params.email).toLowerCase(); rows = rows.filter(r => r && String(r.StaffId || r.Email || '').toLowerCase() === em); }
+  return rows;
+}
 function livePost(key, body, tries, keepalive){
   return liveFetch(liveUrl(key), {method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(body), keepalive:!!keepalive}, tries || 3);
 }
