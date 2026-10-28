@@ -719,6 +719,7 @@ a.rc:hover,button.rc:hover{border-color:var(--accent);transform:translateY(-1px)
 @keyframes srf{0%,65%{background:var(--accent-soft);box-shadow:0 0 0 6px var(--accent-soft);}100%{background:transparent;box-shadow:0 0 0 6px transparent;}}
 .sr-flash{animation:srf 2.6s ease-out;border-radius:6px;}
 
+@keyframes atlSpin{to{transform:rotate(360deg)}}.spin{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:atlSpin .7s linear infinite;vertical-align:-2px;margin-right:6px}
 </style>
 </head>
 <body>
@@ -743,7 +744,7 @@ a.rc:hover,button.rc:hover{border-color:var(--accent);transform:translateY(-1px)
 </script>
 <script>
 // ── VERSION (MAJOR.MINOR.MMDDYY) ────────────────────────────────────────────
-const APP_VERSION = 'v0.4.0.102826-atlas';
+const APP_VERSION = 'v0.4.2.102826-atlas';
 // Version tag shown on the login card and the demo bar. In split mode (atlas_content.js loaded separately) the content file's own label is shown too, so a mismatched pair is easy to spot.
 function verTag(){ return APP_VERSION + (typeof CONTENT_VERSION !== 'undefined' ? ' \u00b7 ' + CONTENT_VERSION : '') + (LIVE ? '' : ' \u00b7 demo mode'); }   // "demo mode" = no backend connected (a wrong or old index.html was published)
 
@@ -1019,6 +1020,7 @@ async function liveGet(key, params){
 function livePost(key, body, tries, keepalive){
   return liveFetch(liveUrl(key), {method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(body), keepalive:!!keepalive}, tries || 3);
 }
+const SPSTART = {};   // SegmentId -> promise of its startSegment call, so endSegment waits for the item id
 const SPID = {};   // SegmentId -> SharePoint item id of the open segment (returned by startSegment)
 let LIVE_LAST_SWEEP = 0;
 const AQ_KEY = 'atlas_attemptq_v1';
@@ -1052,12 +1054,14 @@ const LiveStore = {
   },
   async saveRow(row){ await livePost('saveRow', Object.assign({}, row, {ReceivedTime:''}), 3); return row; },   // server stamps ReceivedTime
   async startSegment(live){
-    const res = await livePost('startSegment', liveRecPayload(live), 2);
+    const p = livePost('startSegment', liveRecPayload(live), 2);
+    SPSTART[live.SegmentId] = p.catch(() => null);
+    const res = await p;
     if(res && res.id != null) SPID[live.SegmentId] = res.id;
   },
   async heartbeat(live){ await livePost('heartbeat', Object.assign(liveRecPayload(live), {id:SPID[live.SegmentId] || ''}), 1, !!live.Closing); },
   async _end(row, id){ await livePost('endSegment', Object.assign({}, row, {ReceivedTime:'', id:id || ''}), 3); delete SPID[row.SegmentId]; },
-  async endSegment(row){ return this._end(row, SPID[row.SegmentId]); },
+  async endSegment(row){ if(SPSTART[row.SegmentId]){ try{ await SPSTART[row.SegmentId]; }catch(e){} delete SPSTART[row.SegmentId]; } return this._end(row, SPID[row.SegmentId]); },
   async grantAttempts(email, n, by){
     const t = iso(Date.now());
     return this.saveRow(mkRow({email, module:'final', type:'grant', attempt:'', score:n, dur:0, idle:0, start:t, end:t, seg:uid('grant-'), status:'granted:' + by}));
@@ -1161,13 +1165,16 @@ let FINAL_CHECK = JSON.parse(JSON.stringify(FINAL_CHECK_DEFAULT));   // the ques
 function getModQuestions(id){ return MOD_QUESTIONS[id] || []; }
 
 
+const PENDING = {};   // rows saved locally whose server write is still in flight: SegmentId -> row
 async function refreshAll(){
-  ROWS = await Store.fetchProgress();
-  DIR = await Store.users();
-  MILEAGE = await Store.listMileage();
-  SETTINGS = await Store.getSettings();
-  FAQ = await Store.listFaq();
-  ATTSETS = await Store.listAttemptSets();
+  const r = await Promise.all([Store.fetchProgress(), Store.users(), Store.listMileage(), Store.getSettings(), Store.listFaq(), Store.listAttemptSets()]);
+  const got = r[0], have = new Set(got.map(x => x.SegmentId));
+  ROWS = got.concat(Object.keys(PENDING).filter(k => !have.has(k)).map(k => PENDING[k]));   // never lose a row that is still being sent
+  DIR = r[1]; MILEAGE = r[2]; SETTINGS = r[3]; FAQ = r[4]; ATTSETS = r[5];
+}
+// Refresh without making the person wait; repaint only the learning path / dashboard (never mid-quiz).
+function bgRefresh(){
+  refreshAll().then(() => { if(ROLE && (VIEW === 'path' || VIEW === 'dash') && !document.querySelector('#overlays .overlay')) renderView(); }).catch(() => {});
 }
 
 // ── DERIVED STATE (everything computed fresh from rows; nothing cached) ─────
@@ -1334,6 +1341,14 @@ const Clock = {
     if(!wasLive){ this.paint(); return null; }   // never held the clock: nothing to record
     const row = mkRow({email:s.staffId, module:s.module, type:s.type, attempt:s.attempt, score:(score==null?'':score), dur:s.active, idle:s.idle,
       start:s.startTime, end:iso(Date.now()), seg:s.segId, visit:s.visit, status, closure:'clean'});
+    if(LIVE){
+      // Live: show the result at once, send in the background (held on this device if it fails).
+      PENDING[row.SegmentId] = row; ROWS = ROWS.concat([row]);
+      Store.endSegment(row).then(() => { delete PENDING[row.SegmentId]; })
+        .catch(() => { outboxPush(row); toast('Save failed: held on this device and re-sent next time.'); });
+      this.paint();
+      return row;
+    }
     try{ await Store.endSegment(row); }
     catch(e){ outboxPush(row); toast('Save failed: held on this device and re-sent next time.'); }
     ROWS = await Store.fetchProgress();
@@ -1405,18 +1420,32 @@ async function doLogin(){
   // @centific.com check comes BEFORE any directory lookup
   if(!/^[^@\s]+@centific\.com$/.test(email)){ err.textContent = 'Please enter your @centific.com email address.'; return; }
   err.textContent = '';
-  try{ DIR = await Store.users(); }
-  catch(e){ err.textContent = "Can't reach the training server right now. Check your connection and try again."; return; }
-  const rec = findUser(email);
-  if(!rec || rec.active === 'no'){ err.textContent = "That email isn't on the moderator list yet. Check with your project coordinator."; return; }
-  ME = {email:rec.email, name:rec.name, role:rec.role, cohort:rec.cohort};
-  const recovered = await Store.recoverOwn(ME.email, SESSION_ID);   // close abandoned segments from the last visit
-  const resent = await flushOutbox();
+  const btn = document.querySelector('#lgBtn, .login-card .btn-primary, .btn-primary[onclick="doLogin()"]');
+  const busy = (on, msg) => { if(btn){ btn.disabled = on; if(on){ btn.dataset.l = btn.dataset.l || btn.innerHTML; btn.innerHTML = msg; } else if(btn.dataset.l){ btn.innerHTML = btn.dataset.l; } } };
+  busy(true, '<span class="spin"></span> Signing you in…');
+  // One round trip: directory, progress, settings and attempt sets load together (a moderator's own rows are filtered here).
+  ME = {email:email, name:'', role:'moderator', cohort:''};
   try{ await refreshAll(); }
-  catch(e){ ME = null; err.textContent = "Signed in, but your progress could not be loaded. Please try again."; return; }
+  catch(e){ ME = null; busy(false); err.textContent = "Can't reach the training server right now. Check your connection and try again."; return; }
+  const rec = findUser(email);
+  if(!rec || rec.active === 'no'){ ME = null; ROWS = []; ATTSETS = []; busy(false); err.textContent = "That email isn't on the moderator list yet. Check with your project coordinator."; return; }
+  ME = {email:rec.email, name:rec.name, role:rec.role, cohort:rec.cohort};
+  if(rec.role !== 'moderator'){
+    busy(true, '<span class="spin"></span> Loading the dashboard…');
+    try{ await refreshAll(); }
+    catch(e){ ME = null; busy(false); err.textContent = "Signed in, but your data could not be loaded. Please try again."; return; }
+  }
   startApp(rec.role);
-  if(recovered) toast('Recovered ' + recovered + ' unfinished segment' + (recovered>1?'s':'') + ' from your last visit.');
-  else if(resent) toast('Re-sent ' + resent + ' held save' + (resent>1?'s':'') + '.');
+  // Housekeeping runs after the app is on screen: close abandoned segments from the last visit, re-send held saves.
+  (async () => {
+    try{
+      const recovered = await Store.recoverOwn(ME.email, SESSION_ID);
+      const resent = await flushOutbox();
+      if(recovered || resent){ await refreshAll(); if(ROLE && (VIEW === 'path' || VIEW === 'dash')) renderView(); }
+      if(recovered) toast('Recovered ' + recovered + ' unfinished segment' + (recovered>1?'s':'') + ' from your last visit.');
+      else if(resent) toast('Re-sent ' + resent + ' held save' + (resent>1?'s':'') + '.');
+    }catch(e){}
+  })();
 }
 async function logout(){
   if(!(await safeLeave())) return;
@@ -1445,7 +1474,7 @@ function startApp(role){
 async function switchView(v){
   if(!(await safeLeave())) return;
   VIEW = v; if(v === 'path'){ QZ = freshQZ(); FIN = {mode:'idle', idx:0, ans:{}, result:null}; }
-  await refreshAll(); renderNavTabs(); renderView(); window.scrollTo(0,0);
+  if(LIVE) bgRefresh(); else await refreshAll(); renderNavTabs(); renderView(); window.scrollTo(0,0);
 }
 function renderNavTabs(){
   const tabs = ROLE === 'admin'
@@ -1523,7 +1552,7 @@ async function openModule(i){
   renderNavTabs(); renderView(); window.scrollTo(0,0);
   await Clock.start({module:m.id, type:'module', attempt:nextAttempt(ME.email, m.id, 'module'), visit:isDone(m.id) ? 'review' : 'initial'});
 }
-async function backToPath(){ if(!(await safeLeave())) return; VIEW = 'path'; QZ = freshQZ(); await refreshAll(); renderNavTabs(); renderView(); window.scrollTo(0,0); }
+async function backToPath(){ if(!(await safeLeave())) return; VIEW = 'path'; QZ = freshQZ(); if(LIVE) bgRefresh(); else await refreshAll(); renderNavTabs(); renderView(); window.scrollTo(0,0); }
 async function previousModule(){ if(CUR_MOD > 0) await openModule(CUR_MOD - 1); }
 async function continueFromModule(){
   if(CUR_MOD < ATLAS_MODULES.length - 1){ await openModule(CUR_MOD + 1); }
@@ -1568,7 +1597,7 @@ function renderQuiz(m, done){
   if(!qs.length) return '<div class="stub-gate"><div class="locked-note">No questions are defined for this module yet.</div></div>';
   const att = QZ.attempt || '';
   if(!QZ.started){
-    return '<div class="quiz-card"><div class="quiz-progress">Knowledge check &middot; ' + qs.length + ' questions ' + (done ? '<span class="pill pill-green pill-sm">&#10003; Completed</span>' : '') + '</div>'
+    return '<div class="quiz-card"><div class="quiz-progress">Knowledge check &middot; ' + modShowN(qs.length) + ' questions ' + (done ? '<span class="pill pill-green pill-sm">&#10003; Completed</span>' : '') + '</div>'
       + '<div class="quiz-q" style="margin-bottom:8px">' + (done ? 'Take the check again as a refresher.' : 'Ready to check what you learned?') + '</div>'
       + '<p class="muted" style="font-size:13.5px;line-height:1.55;margin:0 0 16px">One question at a time. ' + (CHECK_MODE === 'lenient' ? 'A wrong pick lets you try again, but only your first pick counts toward the score.' : '<strong>Once you select an answer it is locked.</strong> To change an answer you have to retry the whole check.') + (CHECK_PASS_PCT > 0 ? ' You need ' + CHECK_PASS_PCT + '% to pass and can retry as often as you like.' : ' There is no pass mark on module checks. Your score is recorded, and you can retry as often as you like.') + ' Every attempt is timed on its own.' + (done ? ' Time on a repeat is logged as review.' : '') + '</p>'
       + '<button class="btn btn-primary" style="width:auto" onclick="startQuiz()">' + (done ? 'Retry the check' : 'Start knowledge check') + ' &rarr;</button> ' + lastQuizBtn(m.id) + '</div>';
@@ -1615,7 +1644,7 @@ async function retryQuiz(){
   const m = ATLAS_MODULES[CUR_MOD];
   if(QZ.started && !QZ.finished) await Clock.stop('incomplete');    // reset mid-attempt: that attempt is logged incomplete
   else await Clock.stop('left');                                     // retry after finishing: close the review-reading segment
-  await refreshAll();
+  if(LIVE) bgRefresh(); else await refreshAll();
   const visit = isDone(m.id) ? 'review' : 'initial';
   QZ = freshQZ(); QZ.mod = m.id; QZ.started = true; QZ.attempt = nextAttempt(ME.email, m.id, 'quiz'); QZ.set = modDraw(m.id, ME.email, QZ.attempt);
   renderView();
@@ -1647,14 +1676,14 @@ async function finishQuiz(){
   LASTQZ[m.id] = {set:QZ.set, ans:Object.assign({}, QZ.ans), ft:Object.assign({}, QZ.ft), wp:QZ.wp, score:score, attempt:QZ.attempt};
   toast(pass ? 'Module complete.' : 'Not passed yet. Review your answers and retry.'); renderView();
   // after a pass the module is complete, so further time here is review; after a fail the module is still initial
-  await refreshAll();
+  if(LIVE) bgRefresh(); else await refreshAll();
   await Clock.start({module:m.id, type:'module', attempt:nextAttempt(ME.email, m.id, 'module'), visit:isDone(m.id) ? 'review' : 'initial'});
 }
 
 // ── FINAL ASSESSMENT ─────────────────────────────────────────────────────────
 async function openFinal(){
   if(!(await safeLeave())) return;
-  await refreshAll();
+  await refreshAll();   // the final must see the latest attempts, so this one waits
   const u = computeUser(ME.email);
   if(!u.allDone){ toast('Complete all modules first.'); return; }
   FIN = {mode: u.certified ? 'certified' : u.locked ? 'locked' : 'intro', idx:0, ans:{}, result:null};
@@ -1674,7 +1703,7 @@ async function submitFinal(){
   let correct = 0; FIN.set.forEach((q, i) => { if(FIN.ans[i] === q.a) correct++; });
   const pct = Math.round(correct / FIN.set.length * 100), pass = pct >= FINAL_PASS_PCT, attempt = FIN.attempt;
   await Clock.stop(pass ? 'passed' : 'failed', pct);
-  try{ await Store.saveAttemptSet(attemptRecord(correct, pct, pass)); }catch(e){}
+  if(LIVE){ Store.saveAttemptSet(attemptRecord(correct, pct, pass)).catch(() => {}); } else { try{ await Store.saveAttemptSet(attemptRecord(correct, pct, pass)); }catch(e){} }
   if(pass){
     const t = iso(Date.now());
     try{ await Store.saveRow(mkRow({email:ME.email, module:'final', type:'certified', attempt:'', score:pct, dur:0, idle:0, start:t, end:t, seg:uid('cert-'), status:'passed'})); }catch(e){ toast('Certification record could not be saved right now.'); }
@@ -2218,8 +2247,10 @@ function ensureIds(){
   Object.keys(MOD_QUESTIONS).forEach(k => MOD_QUESTIONS[k].forEach((q, i) => { if(!q.id) q.id = 'm_' + k + '_' + (i + 1); }));
 }
 function finalCount(){ const c = (typeof FINAL_QUESTION_COUNT === 'number' && FINAL_QUESTION_COUNT > 0) ? FINAL_QUESTION_COUNT : 40; return Math.min(c, FINAL_CHECK.length); }
+function modShowN(n){ return (typeof MOD_QUESTION_COUNT === 'number' && MOD_QUESTION_COUNT > 0) ? Math.min(MOD_QUESTION_COUNT, n) : n; }
 function modDraw(modId, email, attempt){
-  const list = getModQuestions(modId), r = rng(strHash(email + '|' + modId + '|' + attempt)), t = seqTargets(list.length, r);
+  const bank = getModQuestions(modId).slice(), r = rng(strHash(email + '|' + modId + '|' + attempt)), n = (typeof MOD_QUESTION_COUNT === 'number' && MOD_QUESTION_COUNT > 0) ? Math.min(MOD_QUESTION_COUNT, bank.length) : bank.length;
+  shuffleIn(bank, r); const list = bank.slice(0, n), t = seqTargets(list.length, r);
   return list.map((q, i) => shuffleQ(q, t[i], r));
 }
 // Final draw: a fresh random subset and order for every attempt. Questions this moderator has already been asked are only reused when the bank runs out.
@@ -2711,7 +2742,7 @@ async function srOpen(i){
     if(ROLE === 'admin'){ curOpen.faq = true; await switchView('curriculum'); return; }
     await openFaq(); const f = document.getElementById('faqQ'); if(f){ f.value = a.q; faqSearch(a.q); }
   } else if(a.k === 'res'){
-    if(ROLE !== 'admin' && resLocked(a.r, computeUser(ME.email))){ await switchView('resources'); toast('The Atlas Tracker App unlocks after you pass the final assessment.'); }
+    if(ROLE !== 'admin' && resLocked(a.r, computeUser(ME.email))){ await switchView('resources'); toast('The Atlas Checklist App unlocks after you pass the final assessment.'); }
     else if(resOk(a.r.url)) window.open(String(a.r.url).trim(), '_blank', 'noopener');
     else { if(ROLE !== 'admin') await switchView('resources'); toast('That link is coming soon.'); }
   }
