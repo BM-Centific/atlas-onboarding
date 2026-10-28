@@ -744,7 +744,7 @@ a.rc:hover,button.rc:hover{border-color:var(--accent);transform:translateY(-1px)
 </script>
 <script>
 // ── VERSION (MAJOR.MINOR.MMDDYY) ────────────────────────────────────────────
-const APP_VERSION = 'v0.4.2.102826-atlas';
+const APP_VERSION = 'v0.4.3.102826-atlas';
 // Version tag shown on the login card and the demo bar. In split mode (atlas_content.js loaded separately) the content file's own label is shown too, so a mismatched pair is easy to spot.
 function verTag(){ return APP_VERSION + (typeof CONTENT_VERSION !== 'undefined' ? ' \u00b7 ' + CONTENT_VERSION : '') + (LIVE ? '' : ' \u00b7 demo mode'); }   // "demo mode" = no backend connected (a wrong or old index.html was published)
 
@@ -1059,8 +1059,8 @@ const LiveStore = {
     const res = await p;
     if(res && res.id != null) SPID[live.SegmentId] = res.id;
   },
-  async heartbeat(live){ await livePost('heartbeat', Object.assign(liveRecPayload(live), {id:SPID[live.SegmentId] || ''}), 1, !!live.Closing); },
-  async _end(row, id){ await livePost('endSegment', Object.assign({}, row, {ReceivedTime:'', id:id || ''}), 3); delete SPID[row.SegmentId]; },
+  async heartbeat(live){ await livePost('heartbeat', Object.assign(liveRecPayload(live), {id:SPID[live.SegmentId] != null ? String(SPID[live.SegmentId]) : ''}), 1, !!live.Closing); },   // id sent as TEXT: the flow's empty() check throws on a number
+  async _end(row, id){ await livePost('endSegment', Object.assign({}, row, {ReceivedTime:'', id:id != null && id !== '' ? String(id) : ''}), 3); delete SPID[row.SegmentId]; },
   async endSegment(row){ if(SPSTART[row.SegmentId]){ try{ await SPSTART[row.SegmentId]; }catch(e){} delete SPSTART[row.SegmentId]; } return this._end(row, SPID[row.SegmentId]); },
   async grantAttempts(email, n, by){
     const t = iso(Date.now());
@@ -1114,7 +1114,7 @@ const LiveStore = {
       if(!test(l)) continue;
       const hb = l.hbAt || new Date(l.StartTime).getTime() || Date.now();
       const row = mkRow({email:l.StaffId, module:l.Module, type:l.Type, attempt:l.Attempt || '', score:'', dur:l.Active || 0, idle:l.Idle || 0,
-        start:l.StartTime, end:iso(hb), seg:l.SegmentId, visit:l.VisitType, status:'recovered', closure:'recovered'});
+        start:(/^\d{4}-\d\d-\d\dT/.test(String(l.StartTime)) ? l.StartTime : (isNaN(Date.parse(l.StartTime + ' UTC')) ? iso(hb) : iso(Date.parse(l.StartTime + ' UTC')))), end:iso(hb), seg:l.SegmentId, visit:l.VisitType, status:'recovered', closure:'recovered'});
       try{ await this._end(row, l.id); n++; }catch(e){}
     }
     return n;
