@@ -744,7 +744,7 @@ a.rc:hover,button.rc:hover{border-color:var(--accent);transform:translateY(-1px)
 </script>
 <script>
 // ── VERSION (MAJOR.MINOR.MMDDYY) ────────────────────────────────────────────
-const APP_VERSION = 'v0.4.4.102826-atlas';
+const APP_VERSION = 'v0.4.5.102826-atlas';
 // Version tag shown on the login card and the demo bar. In split mode (atlas_content.js loaded separately) the content file's own label is shown too, so a mismatched pair is easy to spot.
 function verTag(){ return APP_VERSION + (typeof CONTENT_VERSION !== 'undefined' ? ' \u00b7 ' + CONTENT_VERSION : '') + (LIVE ? '' : ' \u00b7 demo mode'); }   // "demo mode" = no backend connected (a wrong or old index.html was published)
 
@@ -2434,12 +2434,12 @@ function weekStart(ds){
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 function vMileage(){
-  const prov = '<div class="callout warn" style="margin:0 0 18px"><div class="c-ic">&#9888;</div><div class="c-tx"><strong>Provisional.</strong> These fields are a first draft and have not been confirmed yet. They may change.</div></div>';
+  const prov = '';
   if(ROLE === 'admin'){
-    return '<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><h1 class="page-h1" style="margin:0">Mileage</h1><span class="pill pill-amber pill-sm">Provisional</span><span style="margin-left:auto"></span><button class="btn btn-ghost" onclick="exportMileage()">Export CSV (current filters)</button></div>'
+    return '<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><h1 class="page-h1" style="margin:0">Mileage</h1><span style="margin-left:auto"></span><button class="btn btn-ghost" onclick="exportMileage()">Export CSV (current filters)</button></div>'
       + '<p class="page-sub" style="margin-top:4px">Travel distance submitted by moderators for reimbursement</p>' + prov + mlBarHtml() + '<div id="mlRes">' + mlResHtml() + '</div>';
   }
-  return '<h1 class="page-h1">Mileage <span class="pill pill-amber pill-sm" style="vertical-align:middle;margin-left:6px">Provisional</span></h1><p class="page-sub">Report the distance you travelled for a session, for reimbursement.</p>' + prov
+  return '<h1 class="page-h1">Mileage</h1><p class="page-sub">Report the distance you travelled for a session, for reimbursement.</p>' + prov
     + '<div class="card"><div class="form-grid">'
     + '<div><label class="field-label">Date</label>' + dpHtml('mlDate', todayStr(), 'Select date') + '</div>'
     + '<div><label class="field-label" for="mlMiles">Miles travelled</label><input class="field-input" id="mlMiles" type="number" min="0" step="0.1" placeholder="0.0"></div>'
@@ -2464,7 +2464,7 @@ async function submitMileage(){
 }
 function exportMileage(){
   const rows = [['Date','Moderator','Email','From','To','Miles','Notes','Submitted']].concat(mlFiltered().map(m => [m.date, m.name, m.email, m.from, m.to, m.miles, m.notes, m.submitted]));
-  downloadCSV('atlas_mileage_provisional.csv', rows);
+  downloadCSV('atlas_mileage.csv', rows);
 }
 
 // ── ADMIN: MODERATORS (main screen: search, status and cohort filters) ──
