@@ -744,7 +744,7 @@ a.rc:hover,button.rc:hover{border-color:var(--accent);transform:translateY(-1px)
 </script>
 <script>
 // ── VERSION (MAJOR.MINOR.MMDDYY) ────────────────────────────────────────────
-const APP_VERSION = 'v0.4.3.102826-atlas';
+const APP_VERSION = 'v0.4.4.102826-atlas';
 // Version tag shown on the login card and the demo bar. In split mode (atlas_content.js loaded separately) the content file's own label is shown too, so a mismatched pair is easy to spot.
 function verTag(){ return APP_VERSION + (typeof CONTENT_VERSION !== 'undefined' ? ' \u00b7 ' + CONTENT_VERSION : '') + (LIVE ? '' : ' \u00b7 demo mode'); }   // "demo mode" = no backend connected (a wrong or old index.html was published)
 
@@ -752,8 +752,9 @@ function verTag(){ return APP_VERSION + (typeof CONTENT_VERSION !== 'undefined' 
 // All URLs empty = demo mode (demo adapter, local browser storage). LIVE turns on when getDirectory holds a URL.
 // Live mode talks to the Power Automate flows through LiveStore (below); the UI does not change.
 // saveMileage / getFaq / saveFaq / grantAttempts are second-release flows: mileage and FAQ editing are switched off in live mode.
-const BACKEND = {getDirectory:"https://default9b415834803a4da0afdcfe6b1d52d6.49.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/22/workflows/060f38441fdf4d4b8369776c425c4e57/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=dJ0nJZj9nhSjSaIcrA-z38lOl7q0Vti12dRPEptJhdo", getProgress:"https://default9b415834803a4da0afdcfe6b1d52d6.49.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/23/workflows/ca0815f4782a4e19ad2f9e9ad67dd22b/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Kb7IncHS9aTc2BuyhYZ4ceIUmX2Ggo4L0-G408L_PCQ", saveRow:"https://default9b415834803a4da0afdcfe6b1d52d6.49.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/11/workflows/60aaf17ef9664658a89deeb242345f45/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=1NapjEq2ZG8xjmsMYRSfZRizIQuLU69HChmjsZgnI1U", startSegment:"https://default9b415834803a4da0afdcfe6b1d52d6.49.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/13/workflows/80ac3f5ff8e44d39a6f647a49a9622d9/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=c8uQp0tlH14DTTqSd55bwCAOMGoIJVqChBH4RI1c4Sk", heartbeat:"https://default9b415834803a4da0afdcfe6b1d52d6.49.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/13/workflows/a6b87abedcb64525b60bb66803104950/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=ysSdjYlVzQmcl4Mad5Clc0FEyAExRCO2_eAZVqn7a2s", endSegment:"https://default9b415834803a4da0afdcfe6b1d52d6.49.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/07/workflows/97fb4789f8a24075bf7bc6ccebfcc72f/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=KQvP_SzTw8jYJKOzKCc73LQI1pIELhF0KsfKuytrZ5M", grantAttempts:"", saveMileage:"", getFaq:"", saveFaq:"", getAttemptSets:"https://default9b415834803a4da0afdcfe6b1d52d6.49.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/22/workflows/3359e9b18a5f4d278a2362f7280139e8/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=pi-PZj0xzlYSN0mtuhSAMNgqGZm7DKk0dW7xPuJF8VI", saveAttemptSet:"https://default9b415834803a4da0afdcfe6b1d52d6.49.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/04/workflows/4c865de8b61e43dbbb34b9606ba1e2a2/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=XTJQV42f_M-AfCUThFXnN12v-yD-jbnGiDAjjoh8rCA", getSettings:"https://default9b415834803a4da0afdcfe6b1d52d6.49.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/25/workflows/8aeccade167d4d7aa861abe44dd1095b/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=uR0QMngbow6Hz4cteO7YHh5X9Kmkmnb7exR30Vhzhc8", setSetting:"https://default9b415834803a4da0afdcfe6b1d52d6.49.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/11/workflows/a58e7b5f93b94622a67426a290648753/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=b5JrP7LdS1dd3FoINWkgxhK8iAExmj2Nyz5TvHwQoJY", getOpenSegments:"https://default9b415834803a4da0afdcfe6b1d52d6.49.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/22/workflows/0b79512d379444ab9ceb73a9bc9040ac/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=AkYf9R8dUJXx7bmAFZZ1rM08nz5O0_y92d4L59tp8Gk"};
+const BACKEND = {getDirectory:"https://default9b415834803a4da0afdcfe6b1d52d6.49.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/22/workflows/060f38441fdf4d4b8369776c425c4e57/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=dJ0nJZj9nhSjSaIcrA-z38lOl7q0Vti12dRPEptJhdo", getProgress:"https://default9b415834803a4da0afdcfe6b1d52d6.49.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/23/workflows/ca0815f4782a4e19ad2f9e9ad67dd22b/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Kb7IncHS9aTc2BuyhYZ4ceIUmX2Ggo4L0-G408L_PCQ", saveRow:"https://default9b415834803a4da0afdcfe6b1d52d6.49.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/11/workflows/60aaf17ef9664658a89deeb242345f45/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=1NapjEq2ZG8xjmsMYRSfZRizIQuLU69HChmjsZgnI1U", startSegment:"https://default9b415834803a4da0afdcfe6b1d52d6.49.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/13/workflows/80ac3f5ff8e44d39a6f647a49a9622d9/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=c8uQp0tlH14DTTqSd55bwCAOMGoIJVqChBH4RI1c4Sk", heartbeat:"https://default9b415834803a4da0afdcfe6b1d52d6.49.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/13/workflows/a6b87abedcb64525b60bb66803104950/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=ysSdjYlVzQmcl4Mad5Clc0FEyAExRCO2_eAZVqn7a2s", endSegment:"https://default9b415834803a4da0afdcfe6b1d52d6.49.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/07/workflows/97fb4789f8a24075bf7bc6ccebfcc72f/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=KQvP_SzTw8jYJKOzKCc73LQI1pIELhF0KsfKuytrZ5M", grantAttempts:"", saveMileage:"https://default9b415834803a4da0afdcfe6b1d52d6.49.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/10/workflows/bde5b72b604346a4ac4565db2a78bb4c/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=GsW5fJ8Vo9FNYAJv0dZrxc0eqGHgNIufjtkxOapmZGc", getMileage:"https://default9b415834803a4da0afdcfe6b1d52d6.49.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/16/workflows/8b2157a9a37a4c78973b8d1fccd4760f/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Qj3UioHcSDYWK_sHsfxWWN_nnsjOMRERY5i5aPws1_U", getFaq:"", saveFaq:"", getAttemptSets:"https://default9b415834803a4da0afdcfe6b1d52d6.49.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/22/workflows/3359e9b18a5f4d278a2362f7280139e8/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=pi-PZj0xzlYSN0mtuhSAMNgqGZm7DKk0dW7xPuJF8VI", saveAttemptSet:"https://default9b415834803a4da0afdcfe6b1d52d6.49.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/04/workflows/4c865de8b61e43dbbb34b9606ba1e2a2/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=XTJQV42f_M-AfCUThFXnN12v-yD-jbnGiDAjjoh8rCA", getSettings:"https://default9b415834803a4da0afdcfe6b1d52d6.49.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/25/workflows/8aeccade167d4d7aa861abe44dd1095b/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=uR0QMngbow6Hz4cteO7YHh5X9Kmkmnb7exR30Vhzhc8", setSetting:"https://default9b415834803a4da0afdcfe6b1d52d6.49.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/11/workflows/a58e7b5f93b94622a67426a290648753/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=b5JrP7LdS1dd3FoINWkgxhK8iAExmj2Nyz5TvHwQoJY", getOpenSegments:"https://default9b415834803a4da0afdcfe6b1d52d6.49.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/22/workflows/0b79512d379444ab9ceb73a9bc9040ac/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=AkYf9R8dUJXx7bmAFZZ1rM08nz5O0_y92d4L59tp8Gk"};
 const LIVE = /^https?:\/\//.test(BACKEND.getDirectory);
+const MIL_LIVE = !LIVE || (/^https?:\/\//.test(BACKEND.saveMileage) && /^https?:\/\//.test(BACKEND.getMileage));   // live Mileage tab shows only when both mileage flows are wired
 
 // FLAG BEFORE PRODUCTION: DEMO_DIRECTORY and the "Demo accounts" hint on the login screen go away
 // once the app is wired to a real directory. Keep the two test accounts.
@@ -1024,6 +1025,7 @@ const SPSTART = {};   // SegmentId -> promise of its startSegment call, so endSe
 const SPID = {};   // SegmentId -> SharePoint item id of the open segment (returned by startSegment)
 let LIVE_LAST_SWEEP = 0;
 const AQ_KEY = 'atlas_attemptq_v1';
+const MQ_KEY = 'atlas_mileageq_v1';
 function lnum(v){ const n = Number(v); return isFinite(n) ? n : 0; }
 function lyes(v){ const t = String(v).toLowerCase(); return v === true || t === 'true' || t === 'yes' || t === '1'; }
 function ljson(v, d){ try{ const x = JSON.parse(v); return x == null ? d : x; }catch(e){ return d; } }
@@ -1091,6 +1093,7 @@ const LiveStore = {
     catch(e){ try{ const q = ljson(localStorage.getItem(AQ_KEY), []); q.push(r); localStorage.setItem(AQ_KEY, JSON.stringify(q)); }catch(x){} }   // held, re-sent on next open
   },
   async flushAux(){
+    try{ await this.flushMileage(); }catch(e){}
     let q = []; try{ q = ljson(localStorage.getItem(AQ_KEY), []); }catch(e){}
     if(!q.length) return;
     const keep = [];
@@ -1098,8 +1101,30 @@ const LiveStore = {
     try{ localStorage.setItem(AQ_KEY, JSON.stringify(keep)); }catch(e){}
   },
   async saveUsers(){ throw new Error('Directory changes are made in Atlas_Master.xlsx for now.'); },
-  async listMileage(){ return []; },
-  async addMileage(){ throw new Error('Mileage arrives in the next release.'); },
+  // Mileage (provisional fields). Writes go through saveMileage; a failed send is held on this device and re-sent on next open.
+  _mqGet(){ try{ return ljson(localStorage.getItem(MQ_KEY), []); }catch(e){ return []; } },
+  _mqSet(a){ try{ localStorage.setItem(MQ_KEY, JSON.stringify(a)); }catch(e){} },
+  _mPost(m){ return livePost('saveMileage', {Id:m.id, Email:m.email, Name:m.name, Date:m.date, From:m.from, To:m.to, Miles:m.miles, Notes:m.notes || '', Submitted:m.submitted}, 3); },
+  async listMileage(){
+    if(!MIL_LIVE || !ME) return [];
+    const a = await liveGet('getMileage'), seen = {}, out = [];
+    const day = v => { const t = String(v == null ? '' : v).trim(); if(/^\d{4}-\d\d-\d\d/.test(t)) return t.slice(0, 10); const n = Number(t); return (isFinite(n) && n > 20000) ? new Date(Math.round((n - 25569) * 86400000)).toISOString().slice(0, 10) : t; };
+    const add = m => { if(!m.id || seen[m.id] || (ME.role === 'moderator' && m.email !== ME.email)) return; seen[m.id] = 1; out.push(m); };
+    a.forEach(r => { if(r && r.Id && r.Email) add({id:String(r.Id), email:String(r.Email).trim().toLowerCase(), name:String(r.Name || ''), date:day(r.Date), from:String(r.From || ''), to:String(r.To || ''), miles:lnum(r.Miles), notes:String(r.Notes || ''), submitted:String(r.Submitted || '')}); });
+    this._mqGet().forEach(add);   // held entries show immediately; de-duplicated by Id once the server copy arrives
+    return out;
+  },
+  async addMileage(m){
+    try{ await this._mPost(m); }
+    catch(e){ const q = this._mqGet(); q.push(m); this._mqSet(q); return {held:true}; }
+    return {held:false};
+  },
+  async flushMileage(){
+    const q = this._mqGet(); if(!q.length) return;
+    const keep = [];
+    for(const m of q){ try{ await this._mPost(m); }catch(e){ keep.push(m); } }
+    this._mqSet(keep);
+  },
   async listFaq(){ return []; },
   async saveFaq(){ throw new Error('FAQ editing arrives in the next release.'); },
   async markAbandoned(){},
@@ -1478,8 +1503,8 @@ async function switchView(v){
 }
 function renderNavTabs(){
   const tabs = ROLE === 'admin'
-    ? [['dash','Dashboard'],['mods','Moderators']].concat(LIVE ? [] : [['mileage','Mileage']]).concat([['curriculum','Curriculum']])
-    : [['path','Learning Path'],['resources','Resources']].concat(LIVE ? [] : [['mileage','Mileage']]);
+    ? [['dash','Dashboard'],['mods','Moderators']].concat(MIL_LIVE ? [['mileage','Mileage']] : []).concat([['curriculum','Curriculum']])
+    : [['path','Learning Path'],['resources','Resources']].concat(MIL_LIVE ? [['mileage','Mileage']] : []);
   const active = (VIEW==='module'||VIEW==='final') ? 'path' : (VIEW==='detail' ? 'mods' : (VIEW==='faq' ? 'resources' : VIEW));
   document.getElementById('navTabs').innerHTML = tabs.map(t => '<button class="nav-tab' + (active===t[0]?' active':'') + '" onclick="switchView(\'' + t[0] + '\')">' + t[1] + '</button>').join('');
 }
@@ -2431,9 +2456,11 @@ async function submitMileage(){
   if(!date){ err.textContent = 'Pick the date of travel.'; return; }
   if(!from || !to){ err.textContent = 'Enter where you travelled from and to.'; return; }
   if(!(miles > 0)){ err.textContent = 'Enter the miles travelled (more than 0).'; return; }
-  await Store.addMileage({id:uid('m-'), email:ME.email, name:ME.name, date, from, to, miles, notes, submitted:iso(Date.now())});
-  MILEAGE = await Store.listMileage();
-  toast('Mileage submitted.'); renderView();
+  let res;
+  try{ res = await Store.addMileage({id:uid('m-'), email:ME.email, name:ME.name, date, from, to, miles, notes, submitted:iso(Date.now())}); }
+  catch(e){ err.textContent = 'Could not submit. Try again.'; return; }
+  try{ MILEAGE = await Store.listMileage(); }catch(e){}
+  toast(res && res.held ? 'Saved on this device. It will be sent when the connection returns.' : 'Mileage submitted.'); renderView();
 }
 function exportMileage(){
   const rows = [['Date','Moderator','Email','From','To','Miles','Notes','Submitted']].concat(mlFiltered().map(m => [m.date, m.name, m.email, m.from, m.to, m.miles, m.notes, m.submitted]));
