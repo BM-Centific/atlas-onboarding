@@ -1008,7 +1008,7 @@ async function liveFetch(url, opts, tries){
   }
   throw last || new Error('Request failed');
 }
-async function liveGet(key, params){ const a = await liveFetch(liveUrl(key, params), {method:'POST', headers:{'Content-Type':'text/plain'}, body:'{}'}, 3); return Array.isArray(a) ? a : []; }
+async function liveGet(key, params){ const a = await liveFetch(liveUrl(key, params), {method:'POST'}, 3); return Array.isArray(a) ? a : []; }
 function livePost(key, body, tries, keepalive){
   return liveFetch(liveUrl(key), {method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(body), keepalive:!!keepalive}, tries || 3);
 }
